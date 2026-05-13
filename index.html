@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador: Fuerza de Lorentz (Vectores Volumétricos)</title>
+    <title>Simulador: Fuerza de Lorentz (Vectores a Escala Real)</title>
     <style>
         body {
             margin: 0;
@@ -145,10 +145,10 @@
         <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;">
             <label><span>Velocidad Inicial vx:</span> <span id="val-vx">2.0</span></label>
             <input type="range" id="vx" min="-5" max="5" step="0.5" value="2">
-            <label><span>Velocidad Inicial vy:</span> <span id="val-vy">0.0</span></label>
-            <input type="range" id="vy" min="-5" max="5" step="0.5" value="0">
-            <label><span>Velocidad Inicial vz:</span> <span id="val-vz">1.0</span></label>
-            <input type="range" id="vz" min="-5" max="5" step="0.5" value="1">
+            <label><span>Velocidad Inicial vy:</span> <span id="val-vy">3.0</span></label>
+            <input type="range" id="vy" min="-5" max="5" step="0.5" value="3">
+            <label><span>Velocidad Inicial vz:</span> <span id="val-vz">0.0</span></label>
+            <input type="range" id="vz" min="-5" max="5" step="0.5" value="0">
         </div>
 
         <div class="button-group">
@@ -176,13 +176,11 @@
                 
                 const mat = new THREE.MeshBasicMaterial({ color: color });
                 
-                // Eje (Cilindro) apuntando a lo largo del eje Z local
                 const cylGeo = new THREE.CylinderGeometry(radius, radius, 1, 16);
                 cylGeo.rotateX(Math.PI / 2);
                 cylGeo.translate(0, 0, 0.5);
                 this.shaft = new THREE.Mesh(cylGeo, mat);
                 
-                // Cabeza (Cono)
                 const coneGeo = new THREE.ConeGeometry(radius * 2.5, this.headLength, 16);
                 coneGeo.rotateX(Math.PI / 2);
                 coneGeo.translate(0, 0, this.headLength / 2);
@@ -207,7 +205,7 @@
                 this.visible = true;
                 
                 let sLen = length - this.headLength;
-                if (sLen < 0) sLen = 0.001; // Evita escala negativa si la flecha es muy corta
+                if (sLen < 0) sLen = 0.001;
                 
                 this.shaft.scale.set(1, 1, sLen);
                 this.head.position.z = sLen;
@@ -219,8 +217,8 @@
         scene.background = new THREE.Color(0xf4f4f9);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.up.set(0, 0, 1); // Eje Z hacia arriba
-        camera.position.set(25, 25, 20);
+        camera.up.set(0, 0, 1); 
+        camera.position.set(15, 15, 25);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -270,13 +268,13 @@
         // --- 2. VARIABLES FÍSICAS Y DE ESTADO ---
         let isRunning = false;
         let r = new THREE.Vector3(0, 0, 0);
-        let v = new THREE.Vector3(2, 0, 1);
+        let v = new THREE.Vector3(2, 3, 0); // Ajustado a los valores del ejemplo en la imagen
         let B = new THREE.Vector3(0, 0, 1);
         let q = 1;
         const dt = 0.015;
 
         // --- 3. ELEMENTOS VISUALES ---
-        const particleGeo = new THREE.SphereGeometry(0.5, 32, 32); // Partícula un poco más grande
+        const particleGeo = new THREE.SphereGeometry(0.5, 32, 32); 
         const particleMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
         const particle = new THREE.Mesh(particleGeo, particleMat);
         scene.add(particle);
@@ -294,8 +292,6 @@
         const colorV = 0xE74C3C; 
         const colorF = 0xF1C40F; 
 
-        // Instanciación de las Flechas Gruesas
-        // Radio 0.2 para V y F las hace prominentes. 0.1 para B mantiene el campo ordenado.
         const arrowV = new ThickArrow(colorV, 0.2);
         const arrowF = new ThickArrow(colorF, 0.2);
         scene.add(arrowV);
@@ -343,7 +339,7 @@
 
             particle.position.copy(r);
 
-            // Actualización de Flechas Gruesas
+            // Vector Velocidad (v)
             const vLen = v.length();
             if (vLen > 0) {
                 arrowV.setDirection(v.clone().normalize());
@@ -351,11 +347,12 @@
             }
             arrowV.position.copy(r);
 
+            // Vector Fuerza (F) - Ahora a ESCALA REAL 1:1
             const FLen = F.length();
             if (FLen > 0.01 && q !== 0) {
                 arrowF.visible = true;
                 arrowF.setDirection(F.clone().normalize());
-                arrowF.setLength(FLen * 0.5); 
+                arrowF.setLength(FLen); // Corrección: Se eliminó el factor "* 0.5"
             } else {
                 arrowF.visible = false;
             }
@@ -371,7 +368,7 @@
                 } else {
                     arrow.visible = true;
                     arrow.setDirection(bDir);
-                    arrow.setLength(bLen * 3); // Escala para que se vean bien
+                    arrow.setLength(bLen * 2); // Dejamos un factor 2x para el campo B para mantener visibilidad constante de la grilla
                 }
             });
         }
