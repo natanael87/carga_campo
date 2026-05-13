@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador: Fuerza de Lorentz (Vectores Volumétricos)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f4f4f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        /* Panel de Control con identidad Tec de Monterrey */
+        #ui-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: rgba(0, 51, 160, 0.95); /* Azul Tec #0033A0 */
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            width: 340px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(0, 51, 160, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+        input[type=range]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        select {
+            background-color: #fff;
+            color: #0033A0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        #start-btn {
+            background-color: #FFC72C; /* Dorado institucional */
+            color: #000;
+        }
+        #start-btn:hover {
+            background-color: #e6b320;
+        }
+        #reset-btn {
+            background-color: #e74c3c; /* Rojo para reiniciar */
+            color: #fff;
+        }
+        #reset-btn:hover {
+            background-color: #c0392b;
+        }
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #0033A0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="ui-panel">
+        <h2>Fuerza de Lorentz</h2>
+        
+        <div class="control-group">
+            <label>Carga (q)</label>
+            <select id="charge">
+                <option value="1">Positiva (+1)</option>
+                <option value="-1">Negativa (-1)</option>
+                <option value="0">Neutra (0)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label><span>Campo Bx:</span> <span id="val-bx">0.0</span></label>
+            <input type="range" id="bx" min="-2" max="2" step="0.1" value="0">
+            <label><span>Campo By:</span> <span id="val-by">0.0</span></label>
+            <input type="range" id="by" min="-2" max="2" step="0.1" value="0">
+            <label><span>Campo Bz (Vertical):</span> <span id="val-bz">1.0</span></label>
+            <input type="range" id="bz" min="-2" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-group" style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 10px;">
+            <label><span>Velocidad Inicial vx:</span> <span id="val-vx">2.0</span></label>
+            <input type="range" id="vx" min="-5" max="5" step="0.5" value="2">
+            <label><span>Velocidad Inicial vy:</span> <span id="val-vy">0.0</span></label>
+            <input type="range" id="vy" min="-5" max="5" step="0.5" value="0">
+            <label><span>Velocidad Inicial vz:</span> <span id="val-vz">1.0</span></label>
+            <input type="range" id="vz" min="-5" max="5" step="0.5" value="1">
+        </div>
+
+        <div class="button-group">
+            <button id="start-btn">Iniciar Simulación</button>
+            <button id="reset-btn">Reiniciar</button>
+        </div>
+    </div>
+
+    <div id="legend">
+        <div class="legend-item"><div class="legend-color" style="background: #2ECC71;"></div> Campo Magnético (B)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #E74C3C;"></div> Velocidad (v)</div>
+        <div class="legend-item"><div class="legend-color" style="background: #F1C40F;"></div> Fuerza (F)</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- CLASE PERSONALIZADA PARA FLECHAS GRUESAS ---
+        class ThickArrow extends THREE.Group {
+            constructor(color, radius = 0.2) {
+                super();
+                this.color = color;
+                this.radius = radius;
+                this.headLength = radius * 4;
+                
+                const mat = new THREE.MeshBasicMaterial({ color: color });
+                
+                // Eje (Cilindro) apuntando a lo largo del eje Z local
+                const cylGeo = new THREE.CylinderGeometry(radius, radius, 1, 16);
+                cylGeo.rotateX(Math.PI / 2);
+                cylGeo.translate(0, 0, 0.5);
+                this.shaft = new THREE.Mesh(cylGeo, mat);
+                
+                // Cabeza (Cono)
+                const coneGeo = new THREE.ConeGeometry(radius * 2.5, this.headLength, 16);
+                coneGeo.rotateX(Math.PI / 2);
+                coneGeo.translate(0, 0, this.headLength / 2);
+                this.head = new THREE.Mesh(coneGeo, mat);
+                
+                this.add(this.shaft);
+                this.add(this.head);
+            }
+
+            setDirection(dir) {
+                if (dir.lengthSq() > 0.0001) {
+                    const target = new THREE.Vector3().addVectors(this.position, dir);
+                    this.lookAt(target);
+                }
+            }
+
+            setLength(length) {
+                if (length < 0.05) {
+                    this.visible = false;
+                    return;
+                }
+                this.visible = true;
+                
+                let sLen = length - this.headLength;
+                if (sLen < 0) sLen = 0.001; // Evita escala negativa si la flecha es muy corta
+                
+                this.shaft.scale.set(1, 1, sLen);
+                this.head.position.z = sLen;
+            }
+        }
+
+        // --- 1. CONFIGURACIÓN DE LA ESCENA Y CÁMARA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf4f4f9);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.up.set(0, 0, 1); // Eje Z hacia arriba
+        camera.position.set(25, 25, 20);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Grilla y Ejes
+        const gridHelper = new THREE.GridHelper(50, 50, 0xaaaaaa, 0xdddddd);
+        gridHelper.rotation.x = Math.PI / 2; 
+        scene.add(gridHelper);
+        
+        const axesHelper = new THREE.AxesHelper(25);
+        scene.add(axesHelper);
+
+        // --- ETIQUETAS DE LOS EJES ---
+        function createAxisLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.font = 'bold 70px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(4, 4, 1);
+            return sprite;
+        }
+
+        const labelX = createAxisLabel('X', '#ff0000');
+        labelX.position.set(27, 0, 0);
+        scene.add(labelX);
+
+        const labelY = createAxisLabel('Y', '#00aa00');
+        labelY.position.set(0, 27, 0);
+        scene.add(labelY);
+
+        const labelZ = createAxisLabel('Z', '#0000ff');
+        labelZ.position.set(0, 0, 27);
+        scene.add(labelZ);
+
+        // --- 2. VARIABLES FÍSICAS Y DE ESTADO ---
+        let isRunning = false;
+        let r = new THREE.Vector3(0, 0, 0);
+        let v = new THREE.Vector3(2, 0, 1);
+        let B = new THREE.Vector3(0, 0, 1);
+        let q = 1;
+        const dt = 0.015;
+
+        // --- 3. ELEMENTOS VISUALES ---
+        const particleGeo = new THREE.SphereGeometry(0.5, 32, 32); // Partícula un poco más grande
+        const particleMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+        const particle = new THREE.Mesh(particleGeo, particleMat);
+        scene.add(particle);
+
+        const maxTrailPoints = 3000;
+        let trailCount = 0;
+        const trailPositions = new Float32Array(maxTrailPoints * 3);
+        const trailGeo = new THREE.BufferGeometry();
+        trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+        const trailMat = new THREE.LineBasicMaterial({ color: 0x0033A0, transparent: true, opacity: 0.8, linewidth: 2 });
+        const trail = new THREE.Line(trailGeo, trailMat);
+        scene.add(trail);
+
+        const colorB = 0x2ECC71; 
+        const colorV = 0xE74C3C; 
+        const colorF = 0xF1C40F; 
+
+        // Instanciación de las Flechas Gruesas
+        // Radio 0.2 para V y F las hace prominentes. 0.1 para B mantiene el campo ordenado.
+        const arrowV = new ThickArrow(colorV, 0.2);
+        const arrowF = new ThickArrow(colorF, 0.2);
+        scene.add(arrowV);
+        scene.add(arrowF);
+
+        const bArrows = [];
+        const bSpacing = 15;
+        for(let x = -15; x <= 15; x += bSpacing) {
+            for(let y = -15; y <= 15; y += bSpacing) {
+                for(let z = -10; z <= 20; z += bSpacing) {
+                    const arrowB = new ThickArrow(colorB, 0.1); 
+                    arrowB.position.set(x, y, z);
+                    bArrows.push(arrowB);
+                    scene.add(arrowB);
+                }
+            }
+        }
+
+        // --- 4. LÓGICA DE ACTUALIZACIÓN ---
+        function updatePhysics() {
+            if (!isRunning) {
+                v.set(
+                    parseFloat(document.getElementById('vx').value),
+                    parseFloat(document.getElementById('vy').value),
+                    parseFloat(document.getElementById('vz').value)
+                );
+            }
+
+            // F = q * (v x B)
+            const F = new THREE.Vector3().crossVectors(v, B).multiplyScalar(q);
+            
+            if (isRunning) {
+                v.add(F.clone().multiplyScalar(dt));
+                r.add(v.clone().multiplyScalar(dt));
+
+                if (trailCount < maxTrailPoints) {
+                    trailPositions[trailCount * 3] = r.x;
+                    trailPositions[trailCount * 3 + 1] = r.y;
+                    trailPositions[trailCount * 3 + 2] = r.z;
+                    trailCount++;
+                    trailGeo.setDrawRange(0, trailCount);
+                    trailGeo.attributes.position.needsUpdate = true;
+                }
+            }
+
+            particle.position.copy(r);
+
+            // Actualización de Flechas Gruesas
+            const vLen = v.length();
+            if (vLen > 0) {
+                arrowV.setDirection(v.clone().normalize());
+                arrowV.setLength(vLen);
+            }
+            arrowV.position.copy(r);
+
+            const FLen = F.length();
+            if (FLen > 0.01 && q !== 0) {
+                arrowF.visible = true;
+                arrowF.setDirection(F.clone().normalize());
+                arrowF.setLength(FLen * 0.5); 
+            } else {
+                arrowF.visible = false;
+            }
+            arrowF.position.copy(r);
+        }
+
+        function updateBGrid() {
+            const bLen = B.length();
+            const bDir = bLen > 0 ? B.clone().normalize() : new THREE.Vector3(0,0,1);
+            bArrows.forEach(arrow => {
+                if(bLen === 0) {
+                    arrow.visible = false;
+                } else {
+                    arrow.visible = true;
+                    arrow.setDirection(bDir);
+                    arrow.setLength(bLen * 3); // Escala para que se vean bien
+                }
+            });
+        }
+
+        function toggleSimulation() {
+            isRunning = !isRunning;
+            const startBtn = document.getElementById('start-btn');
+            const vInputs = ['vx', 'vy', 'vz'];
+
+            if (isRunning) {
+                startBtn.textContent = "Pausar Simulación";
+                startBtn.style.backgroundColor = "#e6b320";
+                vInputs.forEach(id => document.getElementById(id).disabled = true);
+            } else {
+                startBtn.textContent = "Reanudar Simulación";
+                startBtn.style.backgroundColor = "#FFC72C";
+            }
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            const startBtn = document.getElementById('start-btn');
+            startBtn.textContent = "Iniciar Simulación";
+            startBtn.style.backgroundColor = "#FFC72C";
+            
+            ['vx', 'vy', 'vz'].forEach(id => document.getElementById(id).disabled = false);
+
+            r.set(0, 0, 0);
+            
+            q = parseFloat(document.getElementById('charge').value);
+            B.set(
+                parseFloat(document.getElementById('bx').value),
+                parseFloat(document.getElementById('by').value),
+                parseFloat(document.getElementById('bz').value)
+            );
+
+            trailCount = 0;
+            trailGeo.setDrawRange(0, 0);
+            
+            updateBGrid();
+            updatePhysics(); 
+        }
+
+        // --- 5. EVENT LISTENERS DE LA INTERFAZ ---
+        const inputs = ['bx', 'by', 'bz', 'vx', 'vy', 'vz'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            const valEl = document.getElementById('val-' + id);
+            el.addEventListener('input', (e) => {
+                valEl.innerText = parseFloat(e.target.value).toFixed(1);
+                if(id.startsWith('b')) {
+                    B.set(
+                        parseFloat(document.getElementById('bx').value),
+                        parseFloat(document.getElementById('by').value),
+                        parseFloat(document.getElementById('bz').value)
+                    );
+                    updateBGrid();
+                }
+            });
+        });
+
+        document.getElementById('charge').addEventListener('change', (e) => {
+            q = parseFloat(e.target.value);
+            updatePhysics();
+        });
+
+        document.getElementById('start-btn').addEventListener('click', toggleSimulation);
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 6. BUCLE DE ANIMACIÓN ---
+        function animate() {
+            requestAnimationFrame(animate);
+            updatePhysics();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Inicializar
+        updateBGrid();
+        animate();
+    </script>
+</body>
+</html>
